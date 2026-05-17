@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frequency Vision - Audio Spectrum</title>
+    <title>Frequency Vision - Inverse Harmony</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * {
@@ -46,22 +46,32 @@
             padding: 20px;
             color: #00ff00;
             font-size: 13px;
-            max-width: 340px;
+            max-width: 360px;
             font-weight: bold;
+            max-height: 95vh;
+            overflow-y: auto;
         }
         
         .title {
             font-size: 16px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             text-align: center;
             color: #00ff00;
             text-shadow: 0 0 15px #00ff00;
         }
         
+        .subtitle {
+            font-size: 11px;
+            text-align: center;
+            color: #00ffff;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        
         button {
             width: 100%;
             padding: 12px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             background: linear-gradient(135deg, #00ff00, #00cc00);
             color: #000;
             border: none;
@@ -80,46 +90,71 @@
             background: #ff0000;
         }
         
-        .freq-section {
+        .section {
             margin-bottom: 12px;
-            padding: 10px;
+            padding: 12px;
             border: 2px solid #00ffff;
             border-radius: 8px;
             background: rgba(0, 255, 255, 0.05);
         }
         
-        .freq-name {
+        .section-title {
             color: #ffff00;
             font-size: 12px;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: bold;
         }
         
-        .freq-bar-container {
+        .freq-pair {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 8px;
+        }
+        
+        .freq-input {
+            flex: 1;
+            text-align: center;
+            padding: 6px;
+            border: 1px solid #ff3300;
+            border-radius: 4px;
+            background: rgba(255, 51, 0, 0.1);
+            color: #ff3300;
+            font-size: 11px;
+        }
+        
+        .freq-arrow {
+            color: #00ff00;
+            font-size: 16px;
+        }
+        
+        .freq-output {
+            flex: 1;
+            text-align: center;
+            padding: 6px;
+            border: 1px solid #0080ff;
+            border-radius: 4px;
+            background: rgba(0, 128, 255, 0.1);
+            color: #0080ff;
+            font-size: 11px;
+        }
+        
+        .bar-container {
             display: flex;
             align-items: flex-end;
-            height: 60px;
+            height: 40px;
             gap: 2px;
         }
         
-        .freq-bar {
+        .bar {
             flex: 1;
-            background: linear-gradient(180deg, #ff0000, #ffff00);
             border-radius: 2px;
-            min-height: 5px;
+            min-height: 3px;
         }
         
-        .freq-bar.bass {
-            background: linear-gradient(180deg, #ff0000, #ff6600);
-        }
-        
-        .freq-bar.mid {
-            background: linear-gradient(180deg, #ffff00, #00ff00);
-        }
-        
-        .freq-bar.treble {
-            background: linear-gradient(180deg, #00ffff, #0080ff);
-        }
+        .bar.bass { background: #ff3300; }
+        .bar.mid { background: #ffff00; }
+        .bar.treble { background: #0080ff; }
         
         .info {
             margin-top: 10px;
@@ -129,6 +164,14 @@
             font-size: 11px;
             color: #ff00ff;
         }
+        
+        .volume-control {
+            margin-top: 8px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -136,40 +179,59 @@
     <canvas id="canvas"></canvas>
     <div id="ui">
         <div class="title">🎵 FREQUENCY VISION 🎵</div>
-        <button id="mic-btn">🎤 Musik starten</button>
+        <div class="subtitle">↔️ Inverse Harmony Response</div>
+        <button id="mic-btn">🎤 Mikrofon starten</button>
         
-        <div class="freq-section">
-            <div class="freq-name">🔴 BASS (tiefe Töne)</div>
-            <div class="freq-bar-container">
-                <div class="freq-bar bass" id="bass-1"></div>
-                <div class="freq-bar bass" id="bass-2"></div>
-                <div class="freq-bar bass" id="bass-3"></div>
-                <div class="freq-bar bass" id="bass-4"></div>
+        <div class="section">
+            <div class="section-title">📊 Dein Input → Handy Output</div>
+            
+            <div class="freq-pair">
+                <div class="freq-input">
+                    <div style="font-size: 10px;">BASS</div>
+                    <div id="bass-input">0</div>
+                </div>
+                <div class="freq-arrow">⇄</div>
+                <div class="freq-output">
+                    <div style="font-size: 10px;">TREBLE</div>
+                    <div id="treble-output">0</div>
+                </div>
+            </div>
+            
+            <div class="freq-pair">
+                <div class="freq-input">
+                    <div style="font-size: 10px;">MID</div>
+                    <div id="mid-input">0</div>
+                </div>
+                <div class="freq-arrow">↕️</div>
+                <div class="freq-output">
+                    <div style="font-size: 10px;">MID</div>
+                    <div id="mid-output">0</div>
+                </div>
+            </div>
+            
+            <div class="freq-pair">
+                <div class="freq-input">
+                    <div style="font-size: 10px;">TREBLE</div>
+                    <div id="treble-input">0</div>
+                </div>
+                <div class="freq-arrow">⇄</div>
+                <div class="freq-output">
+                    <div style="font-size: 10px;">BASS</div>
+                    <div id="bass-output">0</div>
+                </div>
             </div>
         </div>
         
-        <div class="freq-section">
-            <div class="freq-name">🟡 MID (mittlere Töne)</div>
-            <div class="freq-bar-container">
-                <div class="freq-bar mid" id="mid-1"></div>
-                <div class="freq-bar mid" id="mid-2"></div>
-                <div class="freq-bar mid" id="mid-3"></div>
-                <div class="freq-bar mid" id="mid-4"></div>
-            </div>
-        </div>
-        
-        <div class="freq-section">
-            <div class="freq-name">🔵 TREBLE (hohe Töne)</div>
-            <div class="freq-bar-container">
-                <div class="freq-bar treble" id="treble-1"></div>
-                <div class="freq-bar treble" id="treble-2"></div>
-                <div class="freq-bar treble" id="treble-3"></div>
-                <div class="freq-bar treble" id="treble-4"></div>
+        <div class="section">
+            <div class="section-title">🎚️ Output Lautstärke</div>
+            <input type="range" id="volume-control" min="0" max="100" value="30" style="width: 100%;">
+            <div style="font-size: 10px; color: #00ffff; margin-top: 5px;">
+                Level: <span id="volume-display">30</span>%
             </div>
         </div>
         
         <div id="info" class="info">
-            Status: 🟢 Bereit für Musik
+            Status: 🟢 Bereit
         </div>
     </div>
 
@@ -192,33 +254,88 @@
         
         // Audio Setup
         let audioContext = null;
-        let analyser = null;
-        let frequencyData = null;
+        let inputAnalyser = null;
+        let inputFrequencyData = null;
         let isListening = false;
+        
+        // Synthesis Oscillators
+        let oscillators = {
+            bass: null,
+            mid: null,
+            treble: null
+        };
+        
+        let gains = {
+            bass: null,
+            mid: null,
+            treble: null
+        };
+        
+        let masterGain = null;
         
         async function startAudio() {
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
-                analyser.smoothingTimeConstant = 0.8;
-                frequencyData = new Uint8Array(analyser.frequencyBinCount);
                 
+                // Input Analyser
+                inputAnalyser = audioContext.createAnalyser();
+                inputAnalyser.fftSize = 256;
+                inputAnalyser.smoothingTimeConstant = 0.8;
+                inputFrequencyData = new Uint8Array(inputAnalyser.frequencyBinCount);
+                
+                // Create synthesis nodes
+                masterGain = audioContext.createGain();
+                masterGain.connect(audioContext.destination);
+                masterGain.gain.value = 0.3;
+                
+                // Bass Oscillator (25 Hz - 100 Hz)
+                oscillators.bass = audioContext.createOscillator();
+                oscillators.bass.frequency.value = 60;
+                gains.bass = audioContext.createGain();
+                oscillators.bass.connect(gains.bass);
+                gains.bass.connect(masterGain);
+                oscillators.bass.start();
+                
+                // Mid Oscillator (400 Hz)
+                oscillators.mid = audioContext.createOscillator();
+                oscillators.mid.frequency.value = 400;
+                gains.mid = audioContext.createGain();
+                oscillators.mid.connect(gains.mid);
+                gains.mid.connect(masterGain);
+                oscillators.mid.start();
+                
+                // Treble Oscillator (2000 Hz - 4000 Hz)
+                oscillators.treble = audioContext.createOscillator();
+                oscillators.treble.frequency.value = 3000;
+                oscillators.treble.type = 'sine';
+                gains.treble = audioContext.createGain();
+                oscillators.treble.connect(gains.treble);
+                gains.treble.connect(masterGain);
+                oscillators.treble.start();
+                
+                // Get input stream
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const source = audioContext.createMediaStreamSource(stream);
-                source.connect(analyser);
+                source.connect(inputAnalyser);
                 
                 isListening = true;
                 document.getElementById('mic-btn').classList.add('active');
                 document.getElementById('mic-btn').textContent = '🎤 Aktiv!';
-                document.getElementById('info').innerHTML = '🟢 <span style="color: #00ff00;">Musik wird analysiert!</span>';
+                document.getElementById('info').innerHTML = '🟢 <span style="color: #00ff00;">Musik wird analysiert & Gegenfrequenz ausgegeben!</span>';
             } catch (e) {
                 console.error('Audio Error:', e);
-                document.getElementById('info').innerHTML = '🔴 Mikrofon-Fehler';
+                document.getElementById('info').innerHTML = '🔴 Audio-Fehler';
             }
         }
         
         document.getElementById('mic-btn').addEventListener('click', startAudio);
+        
+        // Volume Control
+        document.getElementById('volume-control').addEventListener('input', (e) => {
+            const vol = e.target.value / 100;
+            if (masterGain) masterGain.gain.value = vol * 0.5;
+            document.getElementById('volume-display').textContent = e.target.value;
+        });
         
         // Three.js Setup
         const scene = new THREE.Scene();
@@ -242,123 +359,138 @@
         const ambientLight = new THREE.AmbientLight(0x404040);
         scene.add(ambientLight);
         
-        // Create THREE frequency bars (BASS, MID, TREBLE)
-        const freqGroups = {
-            bass: { bars: [], color: 0xff3300, startX: -6 },
-            mid: { bars: [], color: 0xffff00, startX: -2 },
-            treble: { bars: [], color: 0x0080ff, startX: 2 }
+        // Create visualization bars
+        const barGroups = {
+            input: { bass: [], mid: [], treble: [], color: 0xff3300, x: -8 },
+            output: { bass: [], mid: [], treble: [], color: 0x0080ff, x: 8 }
         };
         
-        function createBars(group, color, startX) {
-            const bars = [];
-            for (let i = 0; i < 4; i++) {
-                const geometry = new THREE.BoxGeometry(1.2, 0.5, 0.5);
-                const material = new THREE.MeshPhongMaterial({
-                    color,
-                    emissive: color,
-                    transparent: true,
-                    opacity: 0.8
-                });
-                const mesh = new THREE.Mesh(geometry, material);
-                
-                mesh.position.x = startX + i * 1.3;
-                mesh.position.y = 0;
-                mesh.position.z = 0;
-                
-                mesh.userData = {
-                    baseHeight: 0.5,
-                    currentHeight: 0.5,
-                    targetHeight: 0.5,
-                    smoothing: 0.15
-                };
-                
-                scene.add(mesh);
-                bars.push(mesh);
-            }
-            return bars;
+        function createBars(color, startX) {
+            const group = { bass: [], mid: [], treble: [] };
+            const freqTypes = ['bass', 'mid', 'treble'];
+            const freqColors = [0xff3300, 0xffff00, 0x0080ff];
+            
+            freqTypes.forEach((type, typeIdx) => {
+                for (let i = 0; i < 4; i++) {
+                    const geometry = new THREE.BoxGeometry(0.8, 0.3, 0.5);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: freqColors[typeIdx],
+                        emissive: freqColors[typeIdx],
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    const mesh = new THREE.Mesh(geometry, material);
+                    
+                    mesh.position.x = startX;
+                    mesh.position.y = (typeIdx - 1) * 3;
+                    mesh.position.z = i * 1;
+                    
+                    mesh.userData = { currentHeight: 0.3, targetHeight: 0.3 };
+                    
+                    scene.add(mesh);
+                    group[type].push(mesh);
+                }
+            });
+            
+            return group;
         }
         
-        freqGroups.bass.bars = createBars('bass', 0xff3300, -6);
-        freqGroups.mid.bars = createBars('mid', 0xffff00, -2);
-        freqGroups.treble.bars = createBars('treble', 0x0080ff, 2);
+        barGroups.input = createBars(0xff3300, -8);
+        barGroups.output = createBars(0x0080ff, 8);
         
-        // Update spectrum
-        function updateSpectrum() {
-            if (!isListening || !analyser) return;
+        // Update visualization
+        function updateVisualization() {
+            if (!isListening || !inputAnalyser) return;
             
-            analyser.getByteFrequencyData(frequencyData);
+            inputAnalyser.getByteFrequencyData(inputFrequencyData);
+            const dataLength = inputFrequencyData.length;
             
-            const dataLength = frequencyData.length;
-            
-            // BASS (0-25% of spectrum)
+            // Calculate frequency bands
             const bassEnd = Math.floor(dataLength * 0.25);
-            freqGroups.bass.bars.forEach((bar, i) => {
-                const start = Math.floor(bassEnd * (i / 4));
-                const end = Math.floor(bassEnd * ((i + 1) / 4));
-                let sum = 0;
-                for (let j = start; j < end; j++) {
-                    sum += frequencyData[j];
-                }
-                const avg = sum / (end - start) / 255;
-                
-                bar.userData.targetHeight = Math.max(0.2, avg * 8);
-                bar.userData.currentHeight += (bar.userData.targetHeight - bar.userData.currentHeight) * bar.userData.smoothing;
-                bar.scale.y = bar.userData.currentHeight;
-                bar.position.y = bar.userData.currentHeight / 2;
-                
-                // Update UI
-                const uiBar = document.getElementById(`bass-${i + 1}`);
-                if (uiBar) uiBar.style.height = (20 + avg * 60) + 'px';
-            });
-            
-            // MID (25-75% of spectrum)
-            const midStart = bassEnd;
             const midEnd = Math.floor(dataLength * 0.75);
-            freqGroups.mid.bars.forEach((bar, i) => {
-                const start = Math.floor(midStart + (midEnd - midStart) * (i / 4));
-                const end = Math.floor(midStart + (midEnd - midStart) * ((i + 1) / 4));
-                let sum = 0;
-                for (let j = start; j < end; j++) {
-                    sum += frequencyData[j];
-                }
-                const avg = sum / (end - start) / 255;
-                
-                bar.userData.targetHeight = Math.max(0.2, avg * 8);
-                bar.userData.currentHeight += (bar.userData.targetHeight - bar.userData.currentHeight) * bar.userData.smoothing;
-                bar.scale.y = bar.userData.currentHeight;
-                bar.position.y = bar.userData.currentHeight / 2;
-                
-                const uiBar = document.getElementById(`mid-${i + 1}`);
-                if (uiBar) uiBar.style.height = (20 + avg * 60) + 'px';
+            
+            let bassValue = 0, midValue = 0, trebleValue = 0;
+            
+            // Bass
+            for (let i = 0; i < bassEnd; i++) {
+                bassValue += inputFrequencyData[i];
+            }
+            bassValue = (bassValue / bassEnd) / 255;
+            
+            // Mid
+            for (let i = bassEnd; i < midEnd; i++) {
+                midValue += inputFrequencyData[i];
+            }
+            midValue = (midValue / (midEnd - bassEnd)) / 255;
+            
+            // Treble
+            for (let i = midEnd; i < dataLength; i++) {
+                trebleValue += inputFrequencyData[i];
+            }
+            trebleValue = (trebleValue / (dataLength - midEnd)) / 255;
+            
+            // Update UI values
+            document.getElementById('bass-input').textContent = (bassValue * 100).toFixed(0);
+            document.getElementById('mid-input').textContent = (midValue * 100).toFixed(0);
+            document.getElementById('treble-input').textContent = (trebleValue * 100).toFixed(0);
+            
+            // INVERSE: High input = Low output
+            const invertedBass = Math.max(0.01, 1 - bassValue);
+            const invertedMid = Math.max(0.01, 1 - midValue);
+            const invertedTreble = Math.max(0.01, 1 - trebleValue);
+            
+            // Update output UI
+            document.getElementById('treble-output').textContent = (bassValue * 100).toFixed(0);
+            document.getElementById('mid-output').textContent = (midValue * 100).toFixed(0);
+            document.getElementById('bass-output').textContent = (trebleValue * 100).toFixed(0);
+            
+            // Update oscillators (inverse mapping)
+            gains.treble.gain.setValueAtTime(bassValue * 0.3, audioContext.currentTime);
+            gains.mid.gain.setValueAtTime(midValue * 0.2, audioContext.currentTime);
+            gains.bass.gain.setValueAtTime(trebleValue * 0.3, audioContext.currentTime);
+            
+            // Update visualization bars
+            barGroups.input.bass.forEach((bar, i) => {
+                const h = Math.max(0.1, bassValue * 4);
+                bar.userData.targetHeight = h;
+                bar.scale.y = bar.userData.targetHeight;
             });
             
-            // TREBLE (75-100% of spectrum)
-            const trebleStart = midEnd;
-            freqGroups.treble.bars.forEach((bar, i) => {
-                const start = Math.floor(trebleStart + (dataLength - trebleStart) * (i / 4));
-                const end = Math.floor(trebleStart + (dataLength - trebleStart) * ((i + 1) / 4));
-                let sum = 0;
-                for (let j = start; j < end; j++) {
-                    sum += frequencyData[j];
-                }
-                const avg = sum / (end - start) / 255;
-                
-                bar.userData.targetHeight = Math.max(0.2, avg * 8);
-                bar.userData.currentHeight += (bar.userData.targetHeight - bar.userData.currentHeight) * bar.userData.smoothing;
-                bar.scale.y = bar.userData.currentHeight;
-                bar.position.y = bar.userData.currentHeight / 2;
-                
-                const uiBar = document.getElementById(`treble-${i + 1}`);
-                if (uiBar) uiBar.style.height = (20 + avg * 60) + 'px';
+            barGroups.input.mid.forEach((bar, i) => {
+                const h = Math.max(0.1, midValue * 4);
+                bar.userData.targetHeight = h;
+                bar.scale.y = bar.userData.targetHeight;
+            });
+            
+            barGroups.input.treble.forEach((bar, i) => {
+                const h = Math.max(0.1, trebleValue * 4);
+                bar.userData.targetHeight = h;
+                bar.scale.y = bar.userData.targetHeight;
+            });
+            
+            barGroups.output.bass.forEach((bar, i) => {
+                const h = Math.max(0.1, trebleValue * 4);
+                bar.userData.targetHeight = h;
+                bar.scale.y = bar.userData.targetHeight;
+            });
+            
+            barGroups.output.mid.forEach((bar, i) => {
+                const h = Math.max(0.1, midValue * 4);
+                bar.userData.targetHeight = h;
+                bar.scale.y = bar.userData.targetHeight;
+            });
+            
+            barGroups.output.treble.forEach((bar, i) => {
+                const h = Math.max(0.1, bassValue * 4);
+                bar.userData.targetHeight = h;
+                bar.scale.y = bar.userData.targetHeight;
             });
         }
         
         // Animation Loop
         function animate() {
             requestAnimationFrame(animate);
-            
-            updateSpectrum();
-            
+            updateVisualization();
             renderer.render(scene, camera);
         }
         
