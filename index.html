@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frequency Vision - Real Sensor AR</title>
+    <title>Frequency Vision - Audio Spectrum</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * {
@@ -41,55 +41,86 @@
             left: 20px;
             z-index: 100;
             background: rgba(0, 0, 0, 0.95);
-            border: 2px solid #00ff00;
-            border-radius: 10px;
-            padding: 15px;
+            border: 3px solid #00ff00;
+            border-radius: 15px;
+            padding: 20px;
             color: #00ff00;
-            font-size: 12px;
-            max-width: 300px;
+            font-size: 13px;
+            max-width: 320px;
             font-weight: bold;
-            max-height: 90vh;
-            overflow-y: auto;
         }
         
         .title {
-            font-size: 14px;
-            margin-bottom: 10px;
+            font-size: 16px;
+            margin-bottom: 15px;
             text-align: center;
             color: #00ff00;
-            text-shadow: 0 0 10px #00ff00;
-        }
-        
-        .sensor-group {
-            margin-bottom: 8px;
-            padding: 8px;
-            border: 1px solid #00ff00;
-            border-radius: 5px;
-        }
-        
-        .sensor-name {
-            font-size: 11px;
-            margin-bottom: 3px;
-            color: #00ffff;
-        }
-        
-        .sensor-value {
-            font-size: 10px;
-            color: #00ff00;
-            margin: 2px 0;
+            text-shadow: 0 0 15px #00ff00, 0 0 30px #00ff00;
         }
         
         button {
             width: 100%;
-            padding: 8px;
-            margin-top: 10px;
-            background: #00ff00;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00ff00, #00cc00);
             color: #000;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
             font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px #00ff00;
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        button.active {
+            background: #ff0000;
+            box-shadow: 0 0 30px #ff0000;
+        }
+        
+        .freq-display {
+            margin-top: 15px;
+            padding: 12px;
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            background: rgba(0, 255, 255, 0.05);
+        }
+        
+        .freq-label {
+            color: #00ffff;
+            margin-bottom: 5px;
+        }
+        
+        .freq-bars {
+            display: flex;
+            gap: 2px;
+            margin: 8px 0;
+        }
+        
+        .freq-bar {
+            flex: 1;
+            height: 20px;
+            background: linear-gradient(180deg, #00ff00, #ffff00, #ff0000);
+            border-radius: 2px;
+            opacity: 0.7;
+        }
+        
+        .info {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ff00ff;
+            border-radius: 5px;
+            font-size: 11px;
+            color: #ff00ff;
         }
     </style>
 </head>
@@ -97,9 +128,29 @@
     <video id="camera-feed"></video>
     <canvas id="canvas"></canvas>
     <div id="ui">
-        <div class="title">⚡ FREQUENCY VISION ⚡</div>
-        <div id="sensors"></div>
-        <button id="mic-btn">🎤 Mikrofon</button>
+        <div class="title">🎵 FREQUENCY VISION 🎵</div>
+        <button id="mic-btn">🎤 Mikrofon starten</button>
+        <div class="freq-display">
+            <div class="freq-label">📊 Frequenz-Spektrum:</div>
+            <div class="freq-bars">
+                <div class="freq-bar" id="bar-0"></div>
+                <div class="freq-bar" id="bar-1"></div>
+                <div class="freq-bar" id="bar-2"></div>
+                <div class="freq-bar" id="bar-3"></div>
+                <div class="freq-bar" id="bar-4"></div>
+                <div class="freq-bar" id="bar-5"></div>
+                <div class="freq-bar" id="bar-6"></div>
+                <div class="freq-bar" id="bar-7"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #00ffff; margin-top: 5px;">
+                <span>Bass</span>
+                <span>Mid</span>
+                <span>Treble</span>
+            </div>
+        </div>
+        <div id="info" class="info">
+            Status: 🟢 Bereit
+        </div>
     </div>
 
     <script>
@@ -119,95 +170,31 @@
         
         startCamera();
         
-        // Sensor Daten
-        const sensorData = {
-            accelerometer: { x: 0, y: 0, z: 0 },
-            gyroscope: { x: 0, y: 0, z: 0 },
-            magnetometer: { x: 0, y: 0, z: 0 },
-            light: 0,
-            temperature: 0,
-            pressure: 0,
-            battery: 100,
-            audio: 0
-        };
-        
-        // Device Motion (Accelerometer + Gyroscope)
-        if (window.DeviceMotionEvent) {
-            window.addEventListener('devicemotion', (e) => {
-                if (e.acceleration) {
-                    sensorData.accelerometer = {
-                        x: e.acceleration.x || 0,
-                        y: e.acceleration.y || 0,
-                        z: e.acceleration.z || 0
-                    };
-                }
-                if (e.rotationRate) {
-                    sensorData.gyroscope = {
-                        x: e.rotationRate.alpha || 0,
-                        y: e.rotationRate.beta || 0,
-                        z: e.rotationRate.gamma || 0
-                    };
-                }
-            });
-        }
-        
-        // Light Sensor (Generic Sensor API)
-        if ('AmbientLightSensor' in window) {
-            try {
-                const sensor = new AmbientLightSensor();
-                sensor.addEventListener('reading', () => {
-                    sensorData.light = sensor.illuminance;
-                });
-                sensor.addEventListener('error', () => {
-                    console.warn('Light Sensor nicht verfügbar');
-                });
-                sensor.start();
-            } catch (e) {
-                console.warn('Light Sensor Error:', e);
-            }
-        }
-        
-        // Barometer (Druck-Sensor)
-        if ('RelativeOrientationSensor' in window) {
-            try {
-                const sensor = new RelativeOrientationSensor();
-                sensor.addEventListener('reading', () => {
-                    // Sensor Daten vorhanden
-                });
-                sensor.start();
-            } catch (e) {
-                console.warn('Orientation Sensor Error:', e);
-            }
-        }
-        
-        // Battery Status API
-        if (navigator.getBattery) {
-            navigator.getBattery().then((battery) => {
-                battery.addEventListener('levelchange', () => {
-                    sensorData.battery = battery.level * 100;
-                });
-            });
-        }
-        
-        // Audio für Schallwellen
+        // Audio Setup
         let audioContext = null;
         let analyser = null;
-        let audioData = null;
+        let frequencyData = null;
+        let isListening = false;
         
         async function startAudio() {
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 analyser = audioContext.createAnalyser();
                 analyser.fftSize = 256;
-                audioData = new Uint8Array(analyser.frequencyBinCount);
+                analyser.smoothingTimeConstant = 0.85;
+                frequencyData = new Uint8Array(analyser.frequencyBinCount);
                 
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const source = audioContext.createMediaStreamSource(stream);
                 source.connect(analyser);
                 
-                document.getElementById('mic-btn').textContent = '🎤 Aktiv!';
+                isListening = true;
+                document.getElementById('mic-btn').classList.add('active');
+                document.getElementById('mic-btn').textContent = '🎤 Mikrofon aktiv!';
+                document.getElementById('info').innerHTML = 'Status: 🟢 <span style="color: #00ff00;">MUSIK WIRD VISUALISIERT!</span>';
             } catch (e) {
                 console.error('Audio Error:', e);
+                document.getElementById('info').innerHTML = 'Status: 🔴 Mikrofon-Fehler';
             }
         }
         
@@ -225,7 +212,7 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setClearColor(0x000000, 0.0);
-        camera.position.z = 5;
+        camera.position.z = 10;
         
         // Lighting
         const light = new THREE.PointLight(0xffffff, 1);
@@ -235,142 +222,110 @@
         const ambientLight = new THREE.AmbientLight(0x404040);
         scene.add(ambientLight);
         
-        // Create Particles für Sensoren
-        const particleGroups = {};
-        const colors = {
-            accelerometer: 0xff0000,
-            gyroscope: 0x00ff00,
-            magnetometer: 0x0000ff,
-            audio: 0xff00ff,
-            light: 0xffff00,
-            temperature: 0xff8800,
-            pressure: 0x00ffff,
-            battery: 0xff0080
-        };
+        // Create Audio Spectrum Visualizer
+        const spectrumBars = [];
+        const barCount = 64;
+        const barWidth = 0.15;
+        const barGap = 0.02;
         
-        // Create particle system für jeden Sensor
-        function createSensorVisualizer(name, color) {
-            const group = new THREE.Group();
-            scene.add(group);
-            
-            const particles = [];
-            const geometry = new THREE.OctahedronGeometry(0.1, 2);
+        for (let i = 0; i < barCount; i++) {
+            const geometry = new THREE.BoxGeometry(barWidth, 1, barWidth);
+            const hue = i / barCount;
+            const color = new THREE.Color().setHSL(hue, 1, 0.5);
             const material = new THREE.MeshPhongMaterial({
                 color,
                 emissive: color,
                 transparent: true,
-                opacity: 0.6
+                opacity: 0.8
             });
+            const mesh = new THREE.Mesh(geometry, material);
             
-            for (let i = 0; i < 30; i++) {
-                const mesh = new THREE.Mesh(geometry, material.clone());
-                mesh.position.set(
-                    (Math.random() - 0.5) * 8,
-                    (Math.random() - 0.5) * 8,
-                    (Math.random() - 0.5) * 8
-                );
-                mesh.userData = {
-                    basePos: mesh.position.clone(),
-                    speed: Math.random() * 0.02 + 0.01
-                };
-                group.add(mesh);
-                particles.push(mesh);
-            }
+            const totalWidth = (barWidth + barGap) * barCount;
+            mesh.position.x = (i * (barWidth + barGap)) - totalWidth / 2;
+            mesh.position.y = 0;
             
-            return { group, particles };
+            mesh.userData = {
+                baseHeight: 0.1,
+                currentHeight: 0.1,
+                targetHeight: 0.1,
+                smoothing: 0.2
+            };
+            
+            scene.add(mesh);
+            spectrumBars.push(mesh);
         }
         
-        // Create all visualizers
-        Object.keys(colors).forEach(sensor => {
-            particleGroups[sensor] = createSensorVisualizer(sensor, colors[sensor]);
-        });
+        // Waveform Circle (outer ring)
+        const waveformGeometry = new THREE.BufferGeometry();
+        const points = [];
+        for (let i = 0; i < 128; i++) {
+            const angle = (i / 128) * Math.PI * 2;
+            points.push(new THREE.Vector3(Math.cos(angle) * 5, Math.sin(angle) * 5, 0));
+        }
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+        const waveform = new THREE.Line(waveformGeometry, lineMaterial);
+        scene.add(waveform);
         
-        // Update particles based on sensor data
-        function updateParticles() {
-            // Accelerometer - Rotation
-            const accel = sensorData.accelerometer;
-            if (particleGroups.accelerometer) {
-                particleGroups.accelerometer.particles.forEach(p => {
-                    p.position.x = p.userData.basePos.x + accel.x * 0.5;
-                    p.position.y = p.userData.basePos.y + accel.y * 0.5;
-                    p.position.z = p.userData.basePos.z + accel.z * 0.5;
-                });
-            }
+        // Update spectrum bars
+        function updateSpectrum() {
+            if (!isListening || !analyser) return;
             
-            // Gyroscope - Spinning
-            if (particleGroups.gyroscope) {
-                particleGroups.gyroscope.particles.forEach(p => {
-                    p.rotation.x += sensorData.gyroscope.x * 0.01;
-                    p.rotation.y += sensorData.gyroscope.y * 0.01;
-                    p.rotation.z += sensorData.gyroscope.z * 0.01;
-                });
-            }
+            analyser.getByteFrequencyData(frequencyData);
             
-            // Light - Scale
-            if (particleGroups.light) {
-                const lightScale = Math.max(0.5, Math.min(2, sensorData.light / 1000));
-                particleGroups.light.particles.forEach(p => {
-                    p.scale.set(lightScale, lightScale, lightScale);
-                    p.material.opacity = 0.3 + (sensorData.light / 50000);
-                });
-            }
+            // Update 3D bars
+            spectrumBars.forEach((bar, i) => {
+                const index = Math.floor((i / spectrumBars.length) * frequencyData.length);
+                const value = frequencyData[index] / 255;
+                
+                bar.userData.targetHeight = Math.max(0.1, value * 8);
+                bar.userData.currentHeight += (bar.userData.targetHeight - bar.userData.currentHeight) * bar.userData.smoothing;
+                
+                bar.scale.y = bar.userData.currentHeight;
+                bar.position.y = bar.userData.currentHeight / 2;
+                
+                // Glow effect
+                bar.material.opacity = 0.5 + value * 0.5;
+            });
             
-            // Audio - Movement
-            if (analyser && audioData) {
-                analyser.getByteFrequencyData(audioData);
-                if (particleGroups.audio) {
-                    particleGroups.audio.particles.forEach((p, i) => {
-                        const idx = Math.floor((i / 30) * audioData.length);
-                        const val = audioData[idx] / 255;
-                        p.position.y = p.userData.basePos.y + val * 2;
-                        p.scale.set(0.5 + val, 0.5 + val, 0.5 + val);
-                        p.material.opacity = 0.3 + val * 0.5;
-                    });
+            // Update UI bars
+            for (let i = 0; i < 8; i++) {
+                const index = Math.floor((i / 8) * frequencyData.length);
+                const value = frequencyData[index] / 255;
+                const bar = document.getElementById(`bar-${i}`);
+                if (bar) {
+                    bar.style.height = (20 + value * 60) + 'px';
+                    bar.style.opacity = 0.5 + value * 0.5;
                 }
             }
             
-            // Battery - Opacity
-            if (particleGroups.battery) {
-                const batteryAlpha = sensorData.battery / 100;
-                particleGroups.battery.particles.forEach(p => {
-                    p.material.opacity = 0.2 + batteryAlpha * 0.6;
-                });
+            // Update waveform circle
+            const positions = [];
+            for (let i = 0; i < 128; i++) {
+                const angle = (i / 128) * Math.PI * 2;
+                const dataIndex = Math.floor((i / 128) * frequencyData.length);
+                const value = frequencyData[dataIndex] / 255;
+                const radius = 5 + value * 3;
+                positions.push(
+                    Math.cos(angle) * radius,
+                    Math.sin(angle) * radius,
+                    0
+                );
             }
+            waveformGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
         }
         
-        // Update UI mit Sensor-Werten
-        function updateUI() {
-            const sensorsDiv = document.getElementById('sensors');
-            sensorsDiv.innerHTML = `
-                <div class="sensor-group">
-                    <div class="sensor-name">📱 Accelerometer</div>
-                    <div class="sensor-value">X: ${sensorData.accelerometer.x.toFixed(2)}</div>
-                    <div class="sensor-value">Y: ${sensorData.accelerometer.y.toFixed(2)}</div>
-                    <div class="sensor-value">Z: ${sensorData.accelerometer.z.toFixed(2)}</div>
-                </div>
-                <div class="sensor-group">
-                    <div class="sensor-name">🔄 Gyroscope</div>
-                    <div class="sensor-value">α: ${sensorData.gyroscope.x.toFixed(2)}</div>
-                    <div class="sensor-value">β: ${sensorData.gyroscope.y.toFixed(2)}</div>
-                    <div class="sensor-value">γ: ${sensorData.gyroscope.z.toFixed(2)}</div>
-                </div>
-                <div class="sensor-group">
-                    <div class="sensor-name">💡 Light</div>
-                    <div class="sensor-value">${sensorData.light.toFixed(0)} lux</div>
-                </div>
-                <div class="sensor-group">
-                    <div class="sensor-name">🔋 Battery</div>
-                    <div class="sensor-value">${sensorData.battery.toFixed(0)}%</div>
-                </div>
-            `;
-        }
+        // Rotation effect
+        let rotationAngle = 0;
         
         // Animation Loop
         function animate() {
             requestAnimationFrame(animate);
             
-            updateParticles();
-            updateUI();
+            updateSpectrum();
+            
+            // Rotate entire spectrum
+            rotationAngle += 0.0003;
+            scene.rotation.z = rotationAngle;
             
             renderer.render(scene, camera);
         }
@@ -383,19 +338,6 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-        
-        // Permission Request
-        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-            document.addEventListener('click', () => {
-                DeviceMotionEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            console.log('Motion permission granted');
-                        }
-                    })
-                    .catch(console.error);
-            }, { once: true });
-        }
     </script>
 </body>
 </html>
